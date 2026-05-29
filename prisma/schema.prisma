@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Day {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  entries   Entry[]
+  createdAt DateTime @default(now())
+}
+
+model Entry {
+  id        String   @id @default(cuid())
+  body      String
+  createdAt DateTime @default(now())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id])
+}

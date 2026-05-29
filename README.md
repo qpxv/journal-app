@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# journal.
 
-## Getting Started
+A personal journal web app — dark, cozy, no auth. Write from the browser, iOS Shortcut, or terminal. Backed by Neon (serverless Postgres) and deployed on Vercel.
 
-First, run the development server:
+---
+
+## Setup
+
+### 1. Clone and install
+
+```bash
+git clone <your-repo>
+cd journal-app
+npm install
+```
+
+### 2. Create a Neon database
+
+1. Go to [neon.tech](https://neon.tech) and create a free project.
+2. Copy the **pooled connection string** (it looks like `postgresql://user:password@ep-....neon.tech/neondb?sslmode=require`).
+
+### 3. Configure environment variables
+
+Create `.env.local` (for Next.js dev server):
+
+```env
+DATABASE_URL=postgresql://user:password@ep-....neon.tech/neondb?sslmode=require
+JOURNAL_SECRET=pick_something_long_and_secret
+```
+
+Also add `DATABASE_URL` to `.env` so the Prisma CLI can connect for migrations:
+
+```env
+DATABASE_URL=postgresql://...same string...
+```
+
+> The `.env` file is loaded by `prisma.config.ts` when running CLI commands like `prisma migrate dev`.
+
+### 4. Run database migrations
+
+```bash
+npx prisma migrate dev --name init
+```
+
+This creates the `Day` and `Entry` tables in your Neon database.
+
+### 5. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables explained
 
-## Learn More
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Neon pooled connection string. Required for all DB queries and migrations. |
+| `JOURNAL_SECRET` | Token that protects write API routes. Include as `"token"` in request bodies or as `Authorization: Bearer <token>` header. |
+| `NEXT_PUBLIC_JOURNAL_SECRET` | *(Optional)* If you want the browser UI to submit entries without manually entering a token, set this to the same value as `JOURNAL_SECRET`. Since this is a personal app, this is safe on a private deployment. |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Journal day boundary
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+A journal day resets at **3:00 AM**, not midnight. An entry written at 2:45 AM on May 30 belongs to the May 29 journal day. This matches how most people think about "today" late at night.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploying to Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push to GitHub.
+2. Import the repo in [vercel.com/new](https://vercel.com/new).
+3. Under **Environment Variables**, add:
+   - `DATABASE_URL` — your Neon pooled connection string
+   - `JOURNAL_SECRET` — your secret token
+   - `NEXT_PUBLIC_JOURNAL_SECRET` — same as `JOURNAL_SECRET` (so the browser UI works)
+4. Deploy. Vercel handles the build and serverless functions automatically.
+
+> Neon's serverless driver is used via `@prisma/adapter-neon`, which works natively in Vercel's serverless environment without needing a persistent connection pool.
+
+---
+
+## API reference
+
+All write routes require a secret token — either as `"token"` in the JSON body, a `token` field in FormData, or an `Authorization: Bearer <token>` header.
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/entries` | GET | All days with entries, newest first |
+| `/api/entries/create` | POST | Create a new entry. Body: `{ body, token, createdAt? }` |
+| `/api/entries/[id]` | PUT | Edit entry body. Body: `{ body, token }` |
+| `/api/entries/[id]` | DELETE | Delete entry (and its day if now empty). Body: `{ token }` |
+| `/api/entries/export` | GET | Download a day as .txt. Query: `?date=YYYY-MM-DD` |
+| `/api/import` | POST | Import a .txt or .rtf file. FormData: `file` + `token` |
+
+---
+
+## iOS Shortcut and Mac keyboard shortcut
+
+See [SHORTCUTS.md](./SHORTCUTS.md) for full instructions.
+
+---
+
+## Tech stack
+
+- **Next.js 16** (App Router)
+- **Prisma 7** ORM
+- **Neon** serverless Postgres
+- **Tailwind CSS v4**
+- **date-fns** for date formatting
+- **lucide-react** for icons
