@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getJournalDate } from '@/lib/journalDate'
 import { parse, isValid } from 'date-fns'
+import { fromZonedTime } from 'date-fns-tz'
 
 const ENTRY_RE = /\[(\d{2}\.\d{2}\.\d{2}),\s*(\d{1,2}:\d{2}\s*[AP]M)\]\s*—\s*(.+)/
 
@@ -61,12 +62,16 @@ export async function POST(req: Request) {
   }
 
   const parsed: ParsedEntry[] = []
-  for (const line of text.split('\n')) {
+  // Normalize line endings (\r\n and \r → \n) before splitting
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+  for (const line of lines) {
     const match = ENTRY_RE.exec(line.trim())
     if (!match) continue
     const [, datePart, timePart, body] = match
-    const dt = parse(`${datePart} ${timePart.replace(/\s+/g, ' ').trim()}`, 'dd.MM.yy h:mm a', new Date())
-    if (!isValid(dt)) continue
+    const localDt = parse(`${datePart} ${timePart.replace(/\s+/g, ' ').trim()}`, 'dd.MM.yy h:mm a', new Date())
+    if (!isValid(localDt)) continue
+    // Convert from Europe/Berlin local time to UTC
+    const dt = fromZonedTime(localDt, 'Europe/Berlin')
     const journalDay = getJournalDate(dt)
     parsed.push({ body: body.trim(), createdAt: dt, journalDay, dayKey: journalDay.toISOString() })
   }
