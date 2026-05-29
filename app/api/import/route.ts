@@ -28,23 +28,18 @@ function stripRtf(raw: string): string {
 }
 
 export async function POST(req: Request) {
-  const cloned = req.clone()
   const authHeader = req.headers.get('authorization')
   const secret = process.env.JOURNAL_SECRET
 
   let tokenValid = false
-
   if (authHeader?.startsWith('Bearer ')) {
     tokenValid = authHeader.slice(7) === secret
   }
 
   const form = await req.formData()
-
   if (!tokenValid) {
-    const formToken = form.get('token')
-    tokenValid = formToken === secret
+    tokenValid = form.get('token') === secret
   }
-
   if (!tokenValid) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -57,37 +52,70 @@ export async function POST(req: Request) {
   const raw = await file.text()
   const text = file.name.toLowerCase().endsWith('.rtf') ? stripRtf(raw) : raw
 
-  const lines = text.split('\n')
-  let importedEntries = 0
-  const seenDayDates = new Set<string>()
-
-  for (const line of lines) {
-    const match = ENTRY_RE.exec(line.trim())
-    if (!match) continue
-
-    const [, datePart, timePart, body] = match
-    const dateTimeStr = `${datePart} ${timePart.replace(/\s+/g, ' ').trim()}`
-    const parsed = parse(dateTimeStr, 'dd.MM.yy h:mm a', new Date())
-    if (!isValid(parsed)) continue
-
-    const journalDay = getJournalDate(parsed)
-    seenDayDates.add(journalDay.toISOString())
-
-    const day = await prisma.day.upsert({
-      where: { date: journalDay },
-      create: { date: journalDay },
-      update: {},
-    })
-
-    await prisma.entry.create({
-      data: { body: body.trim(), createdAt: parsed, dayId: day.id },
-    })
-
-    importedEntries++
+  // Parse all valid lines first
+  interface ParsedEntry {
+    body: string
+    createdAt: Date
+    journalDay: Date
+    dayKey: string
   }
 
-  return NextResponse.json({
-    imported: importedEntries,
-    days: seenDayDates.size,
+  const parsed: ParsedEntry[] = []
+  for (const line of text.split('\n')) {
+    const match = ENTRY_RE.exec(line.trim())
+    if (!match) continue
+    const [, datePart, timePart, body] = match
+    const dt = parse(`${datePart} ${timePart.replace(/\s+/g, ' ').trim()}`, 'dd.MM.yy h:mm a', new Date())
+    if (!isValid(dt)) continue
+    const journalDay = getJournalDate(dt)
+    parsed.push({ body: body.trim(), createdAt: dt, journalDay, dayKey: journalDay.toISOString() })
+  }
+
+  if (parsed.length === 0) {
+    return NextResponse.json({ imported: 0, days: 0 })
+  }
+
+  // Upsert all unique days in one pass
+  const uniqueDays = [...new Set(parsed.map((e) => e.dayKey))]
+  await Promise.all(
+    uniqueDays.map((key) => {
+      const date = new Date(key)
+      return prisma.day.upsert({ where: { date }, create: { date }, update: {} })
+    })
+  )
+
+  // Fetch all day IDs we just upserted
+  const days = await prisma.day.findMany({
+    where: { date: { in: uniqueDays.map((k) => new Date(k)) } },
+    select: { id: true, date: true },
   })
+  const dayMap = new Map(days.map((d) => [d.date.toISOString(), d.id]))
+
+  // Fetch existing createdAt timestamps for these days to avoid duplicates
+  const existingEntries = await prisma.entry.findMany({
+    where: { dayId: { in: [...dayMap.values()] } },
+    select: { createdAt: true, dayId: true },
+  })
+  const existingKeys = new Set(
+    existingEntries.map((e) => `${e.dayId}__${e.createdAt.toISOString()}`)
+  )
+
+  const toInsert = parsed.filter(
+    (e) => !existingKeys.has(`${dayMap.get(e.dayKey)}__${e.createdAt.toISOString()}`)
+  )
+
+  // Bulk insert in batches of 200
+  const BATCH = 200
+  for (let i = 0; i < toInsert.length; i += BATCH) {
+    const batch = toInsert.slice(i, i + BATCH)
+    await prisma.entry.createMany({
+      data: batch.map((e) => ({
+        body: e.body,
+        createdAt: e.createdAt,
+        dayId: dayMap.get(e.dayKey)!,
+      })),
+    })
+  }
+
+  return NextResponse.json({ imported: parsed.length, days: uniqueDays.length })
 }
