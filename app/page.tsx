@@ -12,6 +12,7 @@ import {
   X,
   Check,
   Search,
+  Copy,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { enqueue, getQueue, removeFromQueue } from '@/lib/queue'
@@ -255,6 +256,21 @@ export default function JournalPage() {
     }
   }
 
+  // ── Copy today to clipboard ───────────────────────────────────────────────
+
+  async function handleCopyToday() {
+    if (!days[0]) return
+    const text = days[0].entries
+      .map((e) => `[${format(new Date(e.createdAt), 'dd.MM.yy, h:mm a')}] — ${e.body}`)
+      .join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast('copied!', 'success')
+    } catch {
+      showToast('copy failed', 'error')
+    }
+  }
+
   // ── Export ────────────────────────────────────────────────────────────────
 
   function triggerExport(date: string) {
@@ -344,26 +360,36 @@ export default function JournalPage() {
           <h1 className="text-accent text-xl font-medium tracking-tight">journal.</h1>
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => triggerExport(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors"
-            >
-              <Download size={12} />
-              yesterday
-            </button>
-            <input
-              type="date"
-              value={exportDate}
-              onChange={(e) => setExportDate(e.target.value)}
-              className="text-xs bg-card border border-border rounded-md px-2 py-1.5 text-text-secondary focus:outline-none focus:border-zinc-600 w-[130px]"
-            />
-            <button
-              onClick={() => exportDate && triggerExport(exportDate)}
-              disabled={!exportDate}
+              onClick={handleCopyToday}
+              disabled={loading || days.length === 0}
               className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download size={12} />
-              export
+              <Copy size={12} />
+              copy today
             </button>
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                onClick={() => triggerExport(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}
+                className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors"
+              >
+                <Download size={12} />
+                yesterday
+              </button>
+              <input
+                type="date"
+                value={exportDate}
+                onChange={(e) => setExportDate(e.target.value)}
+                className="text-xs bg-card border border-border rounded-md px-2 py-1.5 text-text-secondary focus:outline-none focus:border-zinc-600 w-[130px]"
+              />
+              <button
+                onClick={() => exportDate && triggerExport(exportDate)}
+                disabled={!exportDate}
+                className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Download size={12} />
+                export
+              </button>
+            </div>
           </div>
         </div>
 
