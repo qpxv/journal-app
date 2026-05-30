@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/prisma'
-import { format } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date')
+  const tz = searchParams.get('tz') ?? 'UTC'
 
   if (!date) {
     return new Response(JSON.stringify({ error: 'date param required' }), {
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   }
 
   const lines = day.entries.map((entry) => {
-    const ts = format(new Date(entry.createdAt), 'dd.MM.yy, h:mm a')
+    const ts = formatInTimeZone(new Date(entry.createdAt), tz, 'dd.MM.yy, h:mm a')
     return `[${ts}] — ${entry.body}`
   })
 

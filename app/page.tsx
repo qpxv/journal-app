@@ -274,8 +274,9 @@ export default function JournalPage() {
   // ── Export ────────────────────────────────────────────────────────────────
 
   function triggerExport(date: string) {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const a = document.createElement('a')
-    a.href = `/api/entries/export?date=${date}`
+    a.href = `/api/entries/export?date=${date}&tz=${encodeURIComponent(tz)}`
     a.download = `${date}.txt`
     a.click()
   }
