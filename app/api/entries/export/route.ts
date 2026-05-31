@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 
 export async function GET(req: Request) {
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
   return new Response(text, {
     headers: {
       'Content-Type': 'text/plain',
-      'Content-Disposition': `attachment; filename="${date}.txt"`,
+      'Content-Disposition': `attachment; filename="${format(new Date(date + 'T00:00:00'), 'MMMM d yyyy').toLowerCase()}.txt"`,
     },
   })
 }
