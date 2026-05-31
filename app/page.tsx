@@ -277,7 +277,7 @@ export default function JournalPage() {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const a = document.createElement('a')
     a.href = `/api/entries/export?date=${date}&tz=${encodeURIComponent(tz)}`
-    const label = format(new Date(date + 'T00:00:00'), 'MMMM d yyyy').toLowerCase()
+    const label = format(new Date(date + 'T00:00:00'), 'MMMM d').toLowerCase()
     a.download = `${label}.txt`
     a.click()
   }
