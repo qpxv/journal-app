@@ -48,7 +48,11 @@ export async function POST(req: Request) {
         }
       }
       if (flushed > 0) {
-        await writeServerQueue(queued.slice(flushed))
+        try {
+          await writeServerQueue(queued.slice(flushed))
+        } catch {
+          // blob write failed — queue will retry on next request
+        }
       }
     }
   } catch {

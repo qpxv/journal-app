@@ -12,9 +12,13 @@ export async function readServerQueue(): Promise<ServerQueuedEntry[]> {
     const { blobs } = await list({ prefix: QUEUE_PATHNAME })
     const blob = blobs.find((b) => b.pathname === QUEUE_PATHNAME)
     if (!blob) return []
-    const res = await fetch(blob.url)
+    const res = await fetch(blob.url, {
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}` },
+      cache: 'no-store',
+    })
     if (!res.ok) return []
-    return (await res.json()) as ServerQueuedEntry[]
+    const text = await res.text()
+    return text ? (JSON.parse(text) as ServerQueuedEntry[]) : []
   } catch {
     return []
   }
@@ -22,9 +26,10 @@ export async function readServerQueue(): Promise<ServerQueuedEntry[]> {
 
 export async function writeServerQueue(entries: ServerQueuedEntry[]): Promise<void> {
   await put(QUEUE_PATHNAME, JSON.stringify(entries), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
+    allowOverwrite: true,
   })
 }
 
