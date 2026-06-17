@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import { IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
+import { NavTabs } from './nav'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,7 +30,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-surface text-text-primary font-mono">{children}</body>
+      <body className="min-h-full bg-surface text-text-primary font-mono">
+        <NavTabs />
+        {children}
+      </body>
     </html>
   )
 }

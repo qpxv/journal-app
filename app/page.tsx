@@ -356,10 +356,9 @@ export default function JournalPage() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto px-4 pt-2 pb-8">
         {/* Top bar */}
-        <div className="flex flex-wrap items-center gap-3 justify-between mb-8">
-          <h1 className="text-accent text-xl font-medium tracking-tight">journal.</h1>
+        <div className="flex flex-wrap items-center gap-3 justify-end mb-8">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleCopyToday}

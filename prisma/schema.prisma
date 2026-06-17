@@ -21,3 +21,10 @@ model Entry {
   dayId     String
   day       Day      @relation(fields: [dayId], references: [id])
 }
+
+model Word {
+  id         String   @id @default(cuid())
+  word       String
+  definition String
+  createdAt  DateTime @default(now())
+}
