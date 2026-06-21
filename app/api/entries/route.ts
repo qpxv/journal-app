@@ -6,7 +6,7 @@ export async function GET() {
     orderBy: { date: 'desc' },
     include: {
       entries: {
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: 'desc' },
       },
     },
   })
