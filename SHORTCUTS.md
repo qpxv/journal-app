@@ -8,7 +8,7 @@
    - Keyboard type: Text
    - Prompt: "Journal entry"
 4. Add action: **Get Contents of URL**
-   - URL: `https://yourapp.vercel.app/api/entries/create`
+   - URL: `https://journal-app-xi-beryl.vercel.app/api/entries/create`
    - Method: POST
    - Headers: `Content-Type: application/json`
    - Body: Select **JSON** and add:
@@ -46,7 +46,7 @@
 entry=$(osascript -e 'text returned of (display dialog "Journal entry" default answer "" with title "journal." buttons {"Cancel", "Save"} default button "Save")')
 
 if [ -n "$entry" ]; then
-  curl -s -X POST https://yourapp.vercel.app/api/entries/create \
+  curl -s -X POST https://journal-app-xi-beryl.vercel.app/api/entries/create \
     -H "Content-Type: application/json" \
     -d "{\"body\": \"$entry\", \"token\": \"YOUR_JOURNAL_SECRET\", \"createdAt\": \"$(date -u +%Y-%m-%dT%H:%M:%S)\"}"
 fi
@@ -67,7 +67,68 @@ fi
 ```applescript
 set entry to text returned of (display dialog "Journal entry" default answer "" with title "journal." buttons {"Cancel", "Save"} default button "Save")
 if entry is not "" then
-  do shell script "curl -s -X POST https://yourapp.vercel.app/api/entries/create -H 'Content-Type: application/json' -d '{\"body\": \"" & entry & "\", \"token\": \"YOUR_JOURNAL_SECRET\", \"createdAt\": \"'$(date -u +%Y-%m-%dT%H:%M:%S)'\"} '"
+  do shell script "curl -s -X POST https://journal-app-xi-beryl.vercel.app/api/entries/create -H 'Content-Type: application/json' -d '{\"body\": \"" & entry & "\", \"token\": \"YOUR_JOURNAL_SECRET\", \"createdAt\": \"'$(date -u +%Y-%m-%dT%H:%M:%S)'\"} '"
 end if
 ```
 3. Save it, then assign a keyboard shortcut in **System Settings → Keyboard → Keyboard Shortcuts → Services**.
+
+---
+
+## Linux / Kali
+
+Pressing a hotkey pops up a GTK dialog (via `zenity`). You type, hit Enter or OK, entry is saved. No terminal window needed.
+
+### 1. Install dependencies
+
+```bash
+sudo apt install zenity curl   # zenity is usually pre-installed on Kali
+```
+
+### 2. Create config file
+
+```bash
+mkdir -p ~/.config/journal
+cat > ~/.config/journal/config << 'EOF'
+JOURNAL_URL=https://journal-app-xi-beryl.vercel.app
+JOURNAL_SECRET=your_journal_secret_here
+EOF
+chmod 600 ~/.config/journal/config
+```
+
+Replace the values with your actual Vercel URL and `JOURNAL_SECRET` from `.env.local`.
+
+### 3. Install the script
+
+From the project root:
+
+```bash
+mkdir -p ~/.local/bin
+cp scripts/journal.sh ~/.local/bin/journal
+chmod +x ~/.local/bin/journal
+```
+
+Make sure `~/.local/bin` is in your `PATH` (add `export PATH="$HOME/.local/bin:$PATH"` to `~/.bashrc` / `~/.zshrc` if needed).
+
+### 4. Bind to a keyboard shortcut
+
+**Xfce (default Kali desktop):**
+1. Settings Manager → Keyboard → Application Shortcuts tab
+2. Click **+**, enter command: `journal`, click OK
+3. Press your desired key combo (e.g. `Super+J`)
+
+**i3 / Sway** — add to `~/.config/i3/config` or `~/.config/sway/config`:
+```
+bindsym $mod+j exec journal
+```
+
+**GNOME** — Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts → `+`
+- Name: Journal
+- Command: `journal`
+- Shortcut: `Super+J`
+
+### Usage
+
+```bash
+journal              # opens dialog (or prompts in terminal if zenity not available)
+journal "quick note" # saves immediately without dialog (good for scripting)
+```
