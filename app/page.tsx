@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { format, subDays, isThisYear } from 'date-fns'
+import { format, subDays, startOfDay, isThisYear } from 'date-fns'
 import {
   ChevronDown,
   ChevronRight,
@@ -271,6 +271,29 @@ export default function JournalPage() {
     }
   }
 
+  // ── Copy last 7 days to clipboard ────────────────────────────────────────
+
+  async function handleCopyLastWeek() {
+    const cutoff = subDays(startOfDay(new Date()), 6)
+    const recent = days.filter((d) => new Date(d.date) >= cutoff)
+    if (recent.length === 0) return
+    const text = recent
+      .map((d) => {
+        const header = format(new Date(d.date), 'EEE MMM d')
+        const entries = d.entries
+          .map((e) => `[${format(new Date(e.createdAt), 'dd.MM.yy, h:mm a')}] — ${e.body}`)
+          .join('\n')
+        return `## ${header}\n${entries}`
+      })
+      .join('\n\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast('copied!', 'success')
+    } catch {
+      showToast('copy failed', 'error')
+    }
+  }
+
   // ── Export ────────────────────────────────────────────────────────────────
 
   function triggerExport(date: string) {
@@ -367,6 +390,14 @@ export default function JournalPage() {
             >
               <Copy size={12} />
               copy today
+            </button>
+            <button
+              onClick={handleCopyLastWeek}
+              disabled={loading || days.length === 0}
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Copy size={12} />
+              copy last 7d
             </button>
             <div className="hidden sm:flex items-center gap-2">
               <button
