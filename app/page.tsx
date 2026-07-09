@@ -64,6 +64,25 @@ function highlightText(text: string, query: string) {
   )
 }
 
+// ─── Journal day helpers ────────────────────────────────────────────────────────
+
+// A "journal day" doesn't roll over until 3am, so a late-night entry still
+// belongs to the previous calendar day.
+function getJournalDateStr(date: Date): string {
+  return format(date.getHours() < 3 ? subDays(date, 1) : date, 'yyyy-MM-dd')
+}
+
+function formatEntryLine(e: Entry): string {
+  return `[${format(new Date(e.createdAt), 'dd.MM.yy, h:mm a')}] — ${e.body}`
+}
+
+function formatDayBlock(day: Day, withHeader: boolean): string {
+  const entries = [...day.entries].reverse().map(formatEntryLine).join('\n')
+  if (!withHeader) return entries
+  const header = format(new Date(day.date), 'EEE MMM d')
+  return `## ${header}\n${entries}`
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function JournalPage() {
@@ -161,7 +180,7 @@ export default function JournalPage() {
     const nowISO = now.toISOString()
 
     const optimisticId = `optimistic-${nowISO}`
-    const todayStr = format(now.getHours() < 3 ? subDays(now, 1) : now, 'yyyy-MM-dd')
+    const todayStr = getJournalDateStr(now)
     const optimisticEntry: Entry = { id: optimisticId, body, createdAt: nowISO, dayId: '' }
 
     setDays((prev) => {
@@ -256,13 +275,9 @@ export default function JournalPage() {
     }
   }
 
-  // ── Copy today to clipboard ───────────────────────────────────────────────
+  // ── Copy to clipboard ────────────────────────────────────────────────────
 
-  async function handleCopyToday() {
-    if (!days[0]) return
-    const text = days[0].entries
-      .map((e) => `[${format(new Date(e.createdAt), 'dd.MM.yy, h:mm a')}] — ${e.body}`)
-      .join('\n')
+  async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text)
       showToast('copied!', 'success')
@@ -271,27 +286,32 @@ export default function JournalPage() {
     }
   }
 
-  // ── Copy last 7 days to clipboard ────────────────────────────────────────
+  async function handleCopyToday() {
+    const day = days.find((d) => d.date.startsWith(getJournalDateStr(new Date())))
+    if (!day || day.entries.length === 0) return
+    await copyText(formatDayBlock(day, false))
+  }
+
+  async function handleCopyYesterday() {
+    const todayLogical = getJournalDateStr(new Date())
+    const yesterdayLogical = format(subDays(new Date(`${todayLogical}T00:00:00`), 1), 'yyyy-MM-dd')
+    const day = days.find((d) => d.date.startsWith(yesterdayLogical))
+    if (!day || day.entries.length === 0) return
+    await copyText(formatDayBlock(day, false))
+  }
 
   async function handleCopyLastWeek() {
     const cutoff = subDays(startOfDay(new Date()), 6)
     const recent = days.filter((d) => new Date(d.date) >= cutoff)
     if (recent.length === 0) return
-    const text = recent
-      .map((d) => {
-        const header = format(new Date(d.date), 'EEE MMM d')
-        const entries = d.entries
-          .map((e) => `[${format(new Date(e.createdAt), 'dd.MM.yy, h:mm a')}] — ${e.body}`)
-          .join('\n')
-        return `## ${header}\n${entries}`
-      })
-      .join('\n\n')
-    try {
-      await navigator.clipboard.writeText(text)
-      showToast('copied!', 'success')
-    } catch {
-      showToast('copy failed', 'error')
-    }
+    const text = [...recent].reverse().map((d) => formatDayBlock(d, true)).join('\n\n')
+    await copyText(text)
+  }
+
+  async function handleCopyAll() {
+    if (days.length === 0) return
+    const text = [...days].reverse().map((d) => formatDayBlock(d, true)).join('\n\n')
+    await copyText(text)
   }
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -392,12 +412,28 @@ export default function JournalPage() {
               copy today
             </button>
             <button
+              onClick={handleCopyYesterday}
+              disabled={loading || days.length === 0}
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Copy size={12} />
+              copy yesterday
+            </button>
+            <button
               onClick={handleCopyLastWeek}
               disabled={loading || days.length === 0}
               className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Copy size={12} />
               copy last 7d
+            </button>
+            <button
+              onClick={handleCopyAll}
+              disabled={loading || days.length === 0}
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Copy size={12} />
+              copy all
             </button>
             <div className="hidden sm:flex items-center gap-2">
               <button
