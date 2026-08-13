@@ -168,7 +168,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
           onChange={e => setWordInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="word"
-          className="w-full sm:w-40 sm:shrink-0 bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-base sm:text-sm transition-colors"
+          className="w-full sm:w-40 sm:shrink-0 bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-sm transition-colors"
         />
         <input
           type="text"
@@ -176,7 +176,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
           onChange={e => setDefinitionInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="definition"
-          className="flex-1 bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-base sm:text-sm transition-colors"
+          className="flex-1 bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-sm transition-colors"
         />
         <button
           onClick={handleAdd}
@@ -198,7 +198,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="search words..."
-          className="w-full bg-card border border-border rounded-lg pl-8 pr-8 py-2.5 text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-base sm:text-xs transition-colors"
+          className="w-full bg-card border border-border rounded-lg pl-8 pr-8 py-2.5 text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-xs transition-colors"
         />
         {searchQuery && (
           <button
@@ -237,7 +237,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
                         if (e.key === 'Enter') handleEditSave(w.id)
                         if (e.key === 'Escape') setEditingWord(null)
                       }}
-                      className="w-36 shrink-0 bg-surface border border-border rounded-md px-2 py-1.5 text-accent text-base sm:text-sm font-medium focus:outline-none focus:border-zinc-600"
+                      className="w-36 shrink-0 bg-surface border border-border rounded-md px-2 py-1.5 text-accent text-sm font-medium focus:outline-none focus:border-zinc-600"
                     />
                     <input
                       type="text"
@@ -247,7 +247,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
                         if (e.key === 'Enter') handleEditSave(w.id)
                         if (e.key === 'Escape') setEditingWord(null)
                       }}
-                      className="flex-1 bg-surface border border-border rounded-md px-2 py-1.5 text-text-secondary text-base sm:text-sm focus:outline-none focus:border-zinc-600"
+                      className="flex-1 bg-surface border border-border rounded-md px-2 py-1.5 text-text-secondary text-sm focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                   <div className="flex gap-3">

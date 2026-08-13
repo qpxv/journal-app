@@ -469,7 +469,7 @@ export default function JournalPage() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="what's on your mind..."
-          className="w-full bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-base sm:text-sm leading-relaxed mb-3 transition-colors"
+          className="w-full bg-card border border-border rounded-lg px-4 py-3.5 text-text-primary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-sm leading-relaxed mb-3 transition-colors"
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -486,7 +486,7 @@ export default function JournalPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="search entries..."
-            className="w-full bg-card border border-border rounded-lg pl-8 pr-8 py-2.5 text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-base sm:text-xs transition-colors"
+            className="w-full bg-card border border-border rounded-lg pl-8 pr-8 py-2.5 text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-zinc-600 text-xs transition-colors"
           />
           {searchActive && (
             <button
@@ -729,7 +729,7 @@ function EntryRow({
                 if (e.key === 'Escape') onEditCancel()
               }}
               rows={3}
-              className="w-full bg-surface border border-border rounded-md px-3 py-2 text-text-primary text-base sm:text-sm leading-relaxed resize-none focus:outline-none focus:border-zinc-600"
+              className="w-full bg-surface border border-border rounded-md px-3 py-2 text-text-primary text-sm leading-relaxed resize-none focus:outline-none focus:border-zinc-600"
             />
             <div className="flex gap-3">
               <button
