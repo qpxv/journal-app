@@ -19,6 +19,17 @@ export async function createWord(word: string, definition: string, token: string
   return result
 }
 
+export async function updateWord(id: string, word: string, definition: string, token: string) {
+  if (token !== process.env.JOURNAL_SECRET) throw new Error('Unauthorized')
+  if (!word.trim() || !definition.trim()) throw new Error('word and definition required')
+  const result = await prisma.word.update({
+    where: { id },
+    data: { word: word.trim(), definition: definition.trim() },
+  })
+  revalidatePath('/words')
+  return result
+}
+
 export async function deleteWord(id: string, token: string) {
   if (token !== process.env.JOURNAL_SECRET) throw new Error('Unauthorized')
   await prisma.word.delete({ where: { id } })
