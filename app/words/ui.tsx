@@ -40,6 +40,88 @@ function highlightText(text: string, query: string) {
   )
 }
 
+function baseWordName(word: string): string {
+  return word.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
+}
+
+function renderSeeAlso(current: Word, words: Word[], onWordClick: (word: Word) => void) {
+  const base = baseWordName(current.word)
+  const related = words.filter(w => w.id !== current.id && baseWordName(w.word) === base)
+  if (related.length === 0) return null
+
+  return (
+    <div className="text-text-muted text-xs flex flex-wrap items-center gap-x-1 gap-y-1">
+      <span>see also:</span>
+      {related.map((w, i) => (
+        <span key={w.id}>
+          <button
+            type="button"
+            onClick={() => onWordClick(w)}
+            className="underline decoration-dotted decoration-text-muted underline-offset-2 hover:text-accent hover:decoration-accent transition-colors"
+          >
+            {w.word}
+          </button>
+          {i < related.length - 1 && ','}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function renderDefinition(
+  text: string,
+  excludeWordId: string,
+  searchQuery: string,
+  words: Word[],
+  onWordClick: (word: Word) => void
+) {
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const trimmedQuery = searchQuery.trim()
+  const alternatives = words.map(w => w.word)
+  if (trimmedQuery) alternatives.push(trimmedQuery)
+  if (alternatives.length === 0) return <>{text}</>
+
+  const uniqueSorted = Array.from(new Set(alternatives)).sort((a, b) => b.length - a.length)
+  const regex = new RegExp(`\\b(${uniqueSorted.map(escape).join('|')})\\b`, 'gi')
+  const parts = text.split(regex)
+
+  return (
+    <>
+      {parts.map((part, i) => {
+        const lower = part.toLowerCase()
+        const matchedWord = words.find(w => w.word.toLowerCase() === lower && w.id !== excludeWordId)
+        const isSearchMatch = Boolean(trimmedQuery) && lower === trimmedQuery.toLowerCase()
+
+        if (matchedWord) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onWordClick(matchedWord)}
+              className={cn(
+                'underline decoration-dotted decoration-text-muted underline-offset-2 hover:text-accent hover:decoration-accent transition-colors',
+                isSearchMatch && 'bg-accent-dim text-accent rounded-sm px-0.5'
+              )}
+            >
+              {part}
+            </button>
+          )
+        }
+
+        if (isSearchMatch) {
+          return (
+            <mark key={i} className="bg-accent-dim text-accent rounded-sm px-0.5">
+              {part}
+            </mark>
+          )
+        }
+
+        return <span key={i}>{part}</span>
+      })}
+    </>
+  )
+}
+
 export function WordsUI({ initialWords }: { initialWords: Word[] }) {
   const [words, setWords] = useState<Word[]>(initialWords)
   const [wordInput, setWordInput] = useState('')
@@ -48,6 +130,7 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [editingWord, setEditingWord] = useState<{ id: string; word: string; definition: string } | null>(null)
   const [adding, setAdding] = useState(false)
+  const [popupWord, setPopupWord] = useState<Word | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -275,9 +358,12 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
                   <span className="w-36 shrink-0 text-accent text-sm font-medium leading-relaxed break-words">
                     {highlightText(w.word, searchQuery)}
                   </span>
-                  <span className="flex-1 min-w-0 text-text-secondary text-sm leading-relaxed break-words">
-                    {highlightText(w.definition, searchQuery)}
-                  </span>
+                  <div className="flex-1 min-w-0 flex flex-col gap-1">
+                    <span className="text-text-secondary text-sm leading-relaxed break-words">
+                      {renderDefinition(w.definition, w.id, searchQuery, words, setPopupWord)}
+                    </span>
+                    {renderSeeAlso(w, words, setPopupWord)}
+                  </div>
                   <div className="shrink-0 flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     {confirmDeleteId === w.id ? (
                       <div className="flex items-center gap-2 text-xs text-text-muted">
@@ -317,6 +403,33 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Linked word popup */}
+      {popupWord && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+          onClick={() => setPopupWord(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-lg px-4 py-3 max-w-md w-full max-h-[80vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-1">
+              <span className="text-accent text-sm font-medium">{popupWord.word}</span>
+              <button
+                onClick={() => setPopupWord(null)}
+                className="text-text-muted hover:text-text-secondary transition-colors shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <p className="text-text-secondary text-sm leading-relaxed break-words mb-2">
+              {renderDefinition(popupWord.definition, popupWord.id, '', words, setPopupWord)}
+            </p>
+            {renderSeeAlso(popupWord, words, setPopupWord)}
+          </div>
         </div>
       )}
 
