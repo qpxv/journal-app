@@ -364,6 +364,11 @@ export default function JournalPage() {
     return isThisYear(d) ? base : `${base}, ${format(d, 'yyyy')}`
   }
 
+  const bestDay = days.reduce<Day | null>(
+    (best, d) => (d.entries.length > (best?.entries.length ?? 0) ? d : best),
+    null
+  )
+
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
@@ -401,7 +406,13 @@ export default function JournalPage() {
 
       <div className="max-w-2xl mx-auto px-4 pt-2 pb-8">
         {/* Top bar */}
-        <div className="flex flex-wrap items-center gap-3 justify-end mb-8">
+        <div className="flex flex-wrap items-center gap-3 justify-between mb-8">
+          {bestDay && bestDay.entries.length > 0 && (
+            <div className="text-sm text-text-muted">
+              record: {bestDay.entries.length} {bestDay.entries.length === 1 ? 'entry' : 'entries'} (
+              {format(new Date(bestDay.date), 'MMM d')})
+            </div>
+          )}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleCopyToday}

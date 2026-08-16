@@ -150,7 +150,10 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
   return (
     <div className="max-w-2xl mx-auto px-4 pt-2 pb-8">
       {/* Top bar */}
-      <div className="flex justify-end mb-8">
+      <div className="flex items-center justify-between mb-8">
+        <span className="text-text-muted text-sm">
+          {words.length} {words.length === 1 ? 'word' : 'words'}
+        </span>
         <button
           onClick={handleCopyAll}
           disabled={words.length === 0}
