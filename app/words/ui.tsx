@@ -82,7 +82,12 @@ function renderDefinition(
   if (alternatives.length === 0) return <>{text}</>
 
   const uniqueSorted = Array.from(new Set(alternatives)).sort((a, b) => b.length - a.length)
-  const regex = new RegExp(`\\b(${uniqueSorted.map(escape).join('|')})\\b`, 'gi')
+  // `\b` fails between two non-word chars (e.g. the ")" and " " in "support (directional) "),
+  // so use explicit lookarounds for "not a letter/digit" instead.
+  const regex = new RegExp(
+    `(?<![a-zA-Z0-9])(${uniqueSorted.map(escape).join('|')})(?![a-zA-Z0-9])`,
+    'gi'
+  )
   const parts = text.split(regex)
 
   return (
