@@ -28,3 +28,10 @@ model Word {
   definition String
   createdAt  DateTime @default(now())
 }
+
+model Axiom {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+}

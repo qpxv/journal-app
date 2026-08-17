@@ -4,6 +4,8 @@ import { useState, useRef } from 'react'
 import { Search, Trash2, X, Copy, Pencil, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createWord, deleteWord, updateWord } from './actions'
+import { getAxioms } from '../axioms/actions'
+import { formatAxioms } from '../axioms/ui'
 
 interface Word {
   id: string
@@ -215,10 +217,25 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
     }
   }
 
-  async function handleCopyAll() {
+  function formatWords(): string {
+    return words.map(w => `${w.word}: ${w.definition}`).join('\n')
+  }
+
+  async function handleCopyWords() {
     if (words.length === 0) return
-    const text = words.map(w => `${w.word}: ${w.definition}`).join('\n')
     try {
+      await navigator.clipboard.writeText(formatWords())
+      showToast('copied!', 'success')
+    } catch {
+      showToast('copy failed', 'error')
+    }
+  }
+
+  async function handleCopyWordsAndAxioms() {
+    if (words.length === 0) return
+    try {
+      const axioms = await getAxioms()
+      const text = `${formatWords()}\n\n${formatAxioms(axioms.map(a => ({ ...a, createdAt: a.createdAt.toString() })))}`
       await navigator.clipboard.writeText(text)
       showToast('copied!', 'success')
     } catch {
@@ -242,14 +259,24 @@ export function WordsUI({ initialWords }: { initialWords: Word[] }) {
         <span className="text-text-muted text-sm">
           {words.length} {words.length === 1 ? 'word' : 'words'}
         </span>
-        <button
-          onClick={handleCopyAll}
-          disabled={words.length === 0}
-          className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Copy size={12} />
-          copy all
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopyWords}
+            disabled={words.length === 0}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Copy size={12} />
+            copy words
+          </button>
+          <button
+            onClick={handleCopyWordsAndAxioms}
+            disabled={words.length === 0}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Copy size={12} />
+            copy words + axioms
+          </button>
+        </div>
       </div>
       {/* Add form */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">

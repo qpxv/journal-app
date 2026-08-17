@@ -27,6 +27,15 @@ export function NavTabs() {
       >
         words.
       </Link>
+      <Link
+        href="/axioms"
+        className={cn(
+          'text-xl font-medium tracking-tight transition-colors',
+          pathname === '/axioms' ? 'text-accent' : 'text-text-muted hover:text-text-secondary'
+        )}
+      >
+        axioms.
+      </Link>
     </nav>
   )
 }
