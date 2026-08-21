@@ -134,6 +134,8 @@ export default function JournalPage() {
   }, [showToast])
 
   useEffect(() => {
+    // Fetch-on-mount: intentional, not derivable from props/state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDays()
   }, [fetchDays])
 
@@ -162,7 +164,9 @@ export default function JournalPage() {
   }, [fetchDays])
 
   useEffect(() => {
+    // Reads localStorage on mount: intentional, not derivable from props/state.
     const queue = getQueue()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQueueCount(queue.length)
     if (queue.length > 0) {
       flushQueue()
@@ -562,7 +566,11 @@ export default function JournalPage() {
                     onClick={() =>
                       setExpandedIds((prev) => {
                         const next = new Set(prev)
-                        next.has(day.id) ? next.delete(day.id) : next.add(day.id)
+                        if (next.has(day.id)) {
+                          next.delete(day.id)
+                        } else {
+                          next.add(day.id)
+                        }
                         return next
                       })
                     }
