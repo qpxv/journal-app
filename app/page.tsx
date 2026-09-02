@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { format, subDays, startOfDay, isThisYear } from 'date-fns'
+import { format, subDays, isThisYear } from 'date-fns'
 import {
   ChevronDown,
   ChevronRight,
@@ -290,34 +290,6 @@ export default function JournalPage() {
     }
   }
 
-  async function handleCopyToday() {
-    const day = days.find((d) => d.date.startsWith(getJournalDateStr(new Date())))
-    if (!day || day.entries.length === 0) return
-    await copyText(formatDayBlock(day, false))
-  }
-
-  async function handleCopyYesterday() {
-    const todayLogical = getJournalDateStr(new Date())
-    const yesterdayLogical = format(subDays(new Date(`${todayLogical}T00:00:00`), 1), 'yyyy-MM-dd')
-    const day = days.find((d) => d.date.startsWith(yesterdayLogical))
-    if (!day || day.entries.length === 0) return
-    await copyText(formatDayBlock(day, false))
-  }
-
-  async function handleCopyLastWeek() {
-    const cutoff = subDays(startOfDay(new Date()), 6)
-    const recent = days.filter((d) => new Date(d.date) >= cutoff)
-    if (recent.length === 0) return
-    const text = [...recent].reverse().map((d) => formatDayBlock(d, true)).join('\n\n')
-    await copyText(text)
-  }
-
-  async function handleCopyAll() {
-    if (days.length === 0) return
-    const text = [...days].reverse().map((d) => formatDayBlock(d, true)).join('\n\n')
-    await copyText(text)
-  }
-
   // ── Export ────────────────────────────────────────────────────────────────
 
   function triggerExport(date: string) {
@@ -418,38 +390,12 @@ export default function JournalPage() {
             </div>
           )}
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleCopyToday}
+            <CopyMenu
+              days={days}
+              onCopyText={copyText}
+              onEmpty={() => showToast('nothing to copy', 'error')}
               disabled={loading || days.length === 0}
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Copy size={12} />
-              copy today
-            </button>
-            <button
-              onClick={handleCopyYesterday}
-              disabled={loading || days.length === 0}
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Copy size={12} />
-              copy yesterday
-            </button>
-            <button
-              onClick={handleCopyLastWeek}
-              disabled={loading || days.length === 0}
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Copy size={12} />
-              copy last 7d
-            </button>
-            <button
-              onClick={handleCopyAll}
-              disabled={loading || days.length === 0}
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Copy size={12} />
-              copy all
-            </button>
+            />
             <div className="hidden sm:flex items-center gap-2">
               <button
                 onClick={() => triggerExport(format(subDays(new Date(), 1), 'yyyy-MM-dd'))}
@@ -677,6 +623,150 @@ export default function JournalPage() {
                 {importResult.days === 1 ? 'day' : 'days'}
               </p>
             )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── CopyMenu ─────────────────────────────────────────────────────────────────
+
+interface CopyMenuProps {
+  days: Day[]
+  onCopyText: (text: string) => void
+  onEmpty: () => void
+  disabled: boolean
+}
+
+const COPY_PRESETS: { label: string; kind: 'lastN' | 'yesterday' | 'all'; n?: number }[] = [
+  { label: 'today', kind: 'lastN', n: 1 },
+  { label: 'yesterday', kind: 'yesterday' },
+  { label: 'last 3 days', kind: 'lastN', n: 3 },
+  { label: 'last 7 days', kind: 'lastN', n: 7 },
+  { label: 'last 14 days', kind: 'lastN', n: 14 },
+  { label: 'last 30 days', kind: 'lastN', n: 30 },
+  { label: 'all', kind: 'all' },
+]
+
+function CopyMenu({ days, onCopyText, onEmpty, disabled }: CopyMenuProps) {
+  const [open, setOpen] = useState(false)
+  const [n, setN] = useState(3)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(e: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  function daysForLastN(count: number): Day[] {
+    const today = getJournalDateStr(new Date())
+    const fromStr = format(subDays(new Date(`${today}T00:00:00`), count - 1), 'yyyy-MM-dd')
+    return days.filter((d) => d.date.slice(0, 10) >= fromStr)
+  }
+
+  function daysForYesterday(): Day[] {
+    const today = getJournalDateStr(new Date())
+    const yStr = format(subDays(new Date(`${today}T00:00:00`), 1), 'yyyy-MM-dd')
+    return days.filter((d) => d.date.slice(0, 10) === yStr)
+  }
+
+  function buildText(selected: Day[]): string {
+    const withEntries = selected.filter((d) => d.entries.length > 0)
+    if (withEntries.length === 0) return ''
+    // `days` is newest-first from the API; output reads oldest-first.
+    const chrono = [...withEntries].reverse()
+    const withHeader = chrono.length > 1
+    return chrono.map((d) => formatDayBlock(d, withHeader)).join('\n\n')
+  }
+
+  function handleCopy(selected: Day[]) {
+    setOpen(false)
+    const text = buildText(selected)
+    if (!text) {
+      onEmpty()
+      return
+    }
+    onCopyText(text)
+  }
+
+  const nValid = Number.isFinite(n) && n > 0
+  const nPreview = nValid ? daysForLastN(n) : []
+  const nDayCount = nPreview.filter((d) => d.entries.length > 0).length
+  const nEntryCount = nPreview.reduce((sum, d) => sum + d.entries.length, 0)
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
+        className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Copy size={12} />
+        copy
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-30 mt-2 w-56 bg-card border border-border rounded-lg shadow-2xl p-2">
+          <div className="flex flex-col">
+            {COPY_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                onClick={() =>
+                  handleCopy(
+                    p.kind === 'all'
+                      ? days
+                      : p.kind === 'yesterday'
+                        ? daysForYesterday()
+                        : daysForLastN(p.n ?? 1)
+                  )
+                }
+                className="text-left text-xs text-text-secondary hover:text-text-primary hover:bg-card-hover px-2 py-1.5 rounded transition-colors"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="border-t border-border-subtle mt-2 pt-2.5 px-2 pb-1">
+            <span className="text-xs text-text-muted">last N days</span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <input
+                type="number"
+                min={1}
+                value={Number.isNaN(n) ? '' : n}
+                onChange={(e) => setN(e.target.valueAsNumber)}
+                className="w-14 bg-surface border border-border rounded-md px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-zinc-600"
+              />
+              <button
+                onClick={() => nValid && handleCopy(daysForLastN(n))}
+                disabled={!nValid}
+                className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary border border-border hover:border-zinc-600 px-2.5 py-1 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Copy size={11} />
+                copy
+              </button>
+            </div>
+            <p className="text-xs text-text-muted mt-1.5">
+              {nValid
+                ? `${nDayCount} ${nDayCount === 1 ? 'day' : 'days'}, ${nEntryCount} ${
+                    nEntryCount === 1 ? 'entry' : 'entries'
+                  }`
+                : 'enter a number'}
+            </p>
           </div>
         </div>
       )}
